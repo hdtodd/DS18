@@ -1,0 +1,21 @@
+###########################################
+# Syntax Coloring Map For DS18-sensor-library
+###########################################
+
+###########################################
+# Datatypes (KEYWORD1)
+###########################################
+
+DS18		KEYWORD1
+
+###########################################
+# Methods and Functions (KEYWORD2)
+###########################################
+
+begin		KEYWORD2
+nextAddr	KEYWORD2
+setPrecision	KEYWORD2
+saveScratchpad	KEYWORD2
+getTemperature KEYWORD2
+read 		KEYWORD2
+

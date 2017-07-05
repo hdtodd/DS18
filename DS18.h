@@ -1,61 +1,79 @@
-// DS18.h
-// DS18-class thermal sensor object definition
-// 
-// Created by HDTodd, September, 2015
-// OneWire DS18S20, DS18B20, DS1822 Temperature Example
-//
-// http://www.pjrc.com/teensy/td_libs_OneWire.html
-//
-// The DallasTemperature library can do all this work for you!
-// http://milesburton.com/Dallas_Temperature_Control_Library
+/* DS18.h
+   DS18-class thermal sensor object definition
 
-typedef enum {readSP=0xBE, writeSP=0x4A, saveSP=0x48, sampleTemp=0x44}
-  sensorCommands;
-   
-// readSP      read 9 bytes of ScratchPad memory over bus
-// writeSP     write 3 bytes of ScratchPad to sensor SP 2-4
-//               2-byte ID or TH/TL and 1 byte resolution setting
-// saveSP      write 9 bytes of ScratchPad memory into SP EEPROM
-// sampleTemp  start sampling of temp, converting to 2-byte digital
-//               result left in SP bytes 0-1
-typedef enum {res9=0b00, res10=0b01, res11=0b10, res12=0b11} resModes;
-const uint16_t resMask[] = {~7, ~3, ~1, ~0};   // masks to truncate raw data
-// Temp read conversion times, per Datasheet:
-//    9-bit     93.75 ms
-//   10-bit    187.5  ms
-//   11-bit    375    ms
-//   12-bit    750    ms
+   Created by HDTodd, 2017-July
+   OneWire DS18S20, DS18B20, DS1822 Temperature Example
+   http://www.pjrc.com/teensy/td_libs_OneWire.html
+   http://milesburton.com/Dallas_Temperature_Control_Library
+*/
 
-boolean firstPass=true;
+#ifndef DS18_h
+#define DS18_h
 
+#include <inttypes.h>
+#include "Arduino.h"
+#include "OneWire.h"
 
-// Search for the next OneWire device
-// Returns 0 and fills in addr[] if found device
-// Returns 1 and fills in addr[] if reset scan at beginning
-//                               and found device
-// Returns -1 if CRC error in reading device ROM
-int DS18::nextAddr(byte *addr);
+//  Devices we know about:
+typedef enum {DS18S20=0x10, DS18B20=0x28, DS1822=0x22} deviceDS18;
 
+//  See DS18B20.pdf datasheet for command codes
+typedef enum {searchROM=0xF0, readROM=0x33, matchROM=0x55, skipROM=0xCC,
+              alarmSearch=0xEC, convertT=0x44, writeSP=0x4A, readSP=0xBE, 
+              copySP=0x48, recallEEPROM=0xB8, readPower=0xB4} sensorCommands;
+/* readSP      read 9 bytes of ScratchPad memory over bus
+   writeSP     write 3 user bytes of ScratchPad to sensor SP 2-4
+                 2-byte ID or TH/TL and 1 byte configuration setting
+   copySP      write 9 bytes of ScratchPad memory into SP EEPROM
+   convertT    start sampling of temp, converting to 2-byte digital
+                 result left in SP bytes 0-1
+*/
 
-// Make sure the device at *addr is a DS18 device
-//   the first ROM byte indicates which chip type
-// Returns 0 if DS18B20 or 22
-//         1 if DS18S20 (old chip)
-//        -1 if not a DS18-type device
-int DS18::verifyType(byte *addr);
+typedef enum resModes {res9=0b00, res10=0b01, res11=0b10, res12=0b11} resModes;
+const int resMask[4] = {~7, ~3, ~1, ~0};   // masks to truncate raw data
 
-//  set precision for temp conversion to 9, 10, 11, or 12 bits
-//  addr[] contains OneWire addr of device; resMode is resolution desired
-void DS18::setPrecision(byte *addr, resModes resMode);
+class DS18: public OneWire {
 
-//  Writes the contents of Scratchpad memory into EEPROM
-//    so that settings (ID or TH/TL and resolution) will be
-//    restored after next power-up 
-void DS18::saveScratchpad(byte *addr);
+private:
+    uint8_t _pinnumber;
+    //    const int convDelay[4] = {94,188,375,750};
+//  Temp read conversion times, per Datasheet:
+//      9-bit     93.75 ms
+//     10-bit    187.5  ms
+//     11-bit    375    ms
+//     12-bit    750    ms
 
+public:
 
-//  reads temperature of sensor at address "addr"
-//    known to be of type type_s
-//  and returns value as a float number, in Celsius scale
-float DS18::getTemperature(int type_s, byte *addr);
+  /* constructor -- needs to know pin # to pass to OneWire()
+  */
+  DS18(uint8_t);
 
+  /* Discover any DS18-class devices on the OneWire buss.  Library
+     recognizes {DS18S20, DS18B20, DS1822} and knows how to set 
+     resolution and read temps for those devices.
+     Returns (bool)true if there is at least one DS18-class device on 
+     the buss or (bool)false if there isn't.
+  */
+  bool begin(void);
+
+  /*  set precision for temp conversion to 9, 10, 11, or 12 bits
+      addr[] contains OneWire addr of device; resMode is resolution desired
+  */
+  void setPrecision(uint8_t *addr, uint8_t resMode);
+
+  /*  Writes the contents of Scratchpad memory into EEPROM
+        so that settings (ID or TH/TL and resolution) will be
+        restored after next power-up 
+  */
+  void saveScratchpad(uint8_t *addr);
+
+  /*  reads temperature of sensor at address "addr"
+      known to be of type type_s and returns value as a 
+      float number, in Celsius scale
+  */
+  float getTemperature(int type_s, uint8_t *addr, uint8_t *data);
+
+};                                   // end class
+
+#endif                               // #end ifndef DS18
