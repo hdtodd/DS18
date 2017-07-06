@@ -1,114 +1,129 @@
-#include <OneWire.h>
+/* DS18_Temp v2.0
 
-// OneWire DS18S20, DS18B20, DS1822 Temperature Example
-//
-// http://www.pjrc.com/teensy/td_libs_OneWire.html
-//
-// The DallasTemperature library can do all this work for you!
-// http://milesburton.com/Dallas_Temperature_Control_Library
+   Demonstrates the use of the DS18 Class library that extends
+   the OneWire class of milesburton.com and pjrc.com.
 
-OneWire  ds(5);  // on pin 10 (a 4.7K resistor is necessary)
+   Report temperatures from all DS18-class probes attached 
+   via OneWire communication system to an Arduino master.
+   Adapted from OneWire DS18S20, DS18B20, DS1822 Temperature Example
+   http://www.pjrc.com/teensy/td_libs_OneWire.html
+   http://milesburton.com/Dallas_Temperature_Control_Library
+
+   Modified by HDTodd, July, 2017, to use the DS18 library.
+*/
+
+#include "OneWire.h"
+#include "DS18_Temp.h"
+
+#define delayTime 10000		// delay time between sampling loop iterations, 10 sec
+
+DS18 ds18(oneWirePin);		// Create the DS18 object.  Assumed to be
+     				// on pin 5 in this example program; see .h
+long markTime;			// used to record loop timings
+bool firstPass = true;		// first pass through loop does setup, no delay
+char *HEX2(uint8_t x);		// used to print hex numbers in 2-digit format always
 
 void setup(void) {
   Serial.begin(9600);
-}
+  if (!ds18.begin()) {
+     Serial.println("No DS18 devices found on OneWire buss.");
+     delay(60000);
+     return;
+     };
+  ds18.reset();
+  ds18.reset_search();
+
+  Serial.println("Testing program to demonstrate use of DS18 Class Library to read DS18 temperature sensors");
+  Serial.print("Connect sensors to Arduino with 3-wire connection.  ");
+  Serial.println("NOT in parasitic mode");
+  Serial.print("Connect data (yellow/white) to pin "); Serial.print(oneWirePin);
+  Serial.println(" with 4K7 Ohm pullup to 3V3 VCC");
+  Serial.println("Program cycles through all DS18B20\'s on the OneWire bus");
+  Serial.println("\tand reads the temp off each one at 11-bit resolution = 0.125, degrees C");
+  Serial.println();
+};				// end setup()
 
 void loop(void) {
   byte i;
-  byte present = 0;
   byte type_s;
-  byte data[12];
-  byte addr[8];
+  byte addr[8], data[12];
   float celsius, fahrenheit;
-  
-  if ( !ds.search(addr)) {
-//    Serial.println("No more addresses.");
-//    Serial.println();
-    ds.reset_search();
-    delay(250);
+
+  if ( !ds18.search(addr)) {		// scan for address of next device on OneWire
+    if (!firstPass) delay(delayTime);   // no "next device": if not first pass, delay next loop
+    firstPass = false; 			// 
+    ds18.reset_search();		// reset search, 
+    delay(250);				// wait for reset to complete
+    for (i=0; i<80; i++) Serial.print('-'); Serial.println(); 
+    Serial.println("NEXT SCAN");
     return;
-  }
-  
+    };					// end if(!ds18.search())
+
   Serial.print("ROM =");
   for( i = 0; i < 8; i++) {
     Serial.write(' ');
-    Serial.print(addr[i], HEX);
-  }
+    Serial.print(HEX2(addr[i]));
+  };
 
-  if (OneWire::crc8(addr, 7) != addr[7]) {
-      Serial.println("CRC is not valid!");
+  if (ds18.crc8(addr, 7) != addr[7]) {
+      Serial.println();
+      Serial.print("[?DS18_Temp]: CRC is not valid! 0x"); Serial.println(HEX2(ds18.crc8(addr, 7)));
+      Serial.println("              Check wiring connections and restart");
+      delay(60000);
       return;
-  }
-//  Serial.println();
- 
-  // the first ROM byte indicates which chip
+  };					// end crc8 check
+
+  // the first address byte indicates which chip type
   switch (addr[0]) {
     case 0x10:
-      Serial.println("  Chip = DS18S20");  // or old DS1820
+      Serial.print("  Chip = DS18S20");  // or old DS1820
       type_s = 1;
       break;
     case 0x28:
-      Serial.println("  Chip = DS18B20");
+      Serial.print("  Chip = DS18B20");
       type_s = 0;
       break;
     case 0x22:
-      Serial.println("  Chip = DS1822");
+      Serial.print("  Chip = DS1822");
       type_s = 0;
       break;
     default:
-      Serial.println("Device is not a DS18x20 family device.");
+      Serial.print("Device with code 0x");
+      Serial.print(HEX2(addr[0]));
+      Serial.println("Device is not a known DS18 family device.");
       return;
   } 
 
-  ds.reset();
-  ds.select(addr);
-  ds.write(0x44, 1);        // start conversion, with parasite power on at the end
+  ds18.reset();
+  ds18.select(addr);
+  ds18.setPrecision(addr,res11);		// set for 11-bit precision, ~350ms
+//  ds18.write(0x44, 1);        			// start conversion, with parasite power on at the end
+//  delay(1000);     	      			// 1000ms will cover up to 12-bit precision
+  // we could do a ds18.depower() here to take power off the data line, 
+  //  but the reset will take care of it.
   
-  delay(1000);     // maybe 750ms is enough, maybe not
-  // we might do a ds.depower() here, but the reset will take care of it.
-  
-  present = ds.reset();
-  ds.select(addr);    
-  ds.write(0xBE);         // Read Scratchpad
-
-  Serial.print("\tData = ");
-  Serial.print(present, HEX);
-  Serial.print(" ");
-  for ( i = 0; i < 9; i++) {           // we need 9 bytes
-    data[i] = ds.read();
-    Serial.print(data[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.print(" CRC=");
-  Serial.print(OneWire::crc8(data, 8), HEX);
-//  Serial.println();
-
-  // Convert the data to actual temperature
-  // because the result is a 16 bit signed integer, it should
-  // be stored to an "int16_t" type, which is always 16 bits
-  // even when compiled on a 32 bit processor.
-  int16_t raw = (data[1] << 8) | data[0];
-  if (type_s) {
-    raw = raw << 3; // 9 bit resolution default
-    if (data[7] == 0x10) {
-      // "count remain" gives full 12 bit resolution
-      raw = (raw & 0xFFF0) + 12 - data[6];
-    }
-  } else {
-    byte cfg = (data[4] & 0x60);
-    // at lower res, the low bits are undefined, so let's zero them
-    if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
-    else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
-    else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
-    //// default is 12 bit resolution, 750 ms conversion time
-  }
-  celsius = (float)raw / 16.0;
-  fahrenheit = celsius * 1.8 + 32.0;
+  ds18.reset();
+  markTime = -millis();				// mark start of conversion for timing
+  celsius = ds18.getTemperature(type_s, addr, data);
+  markTime += millis();
+  Serial.print("\tLabel="); Serial.write(data[2]); Serial.write(data[3]);
   Serial.print("  Temperature = ");
   Serial.print(celsius);
   Serial.print(" C = , ");
-  Serial.print(fahrenheit);
-  Serial.println(" F");
-  Serial.println();
-  delay(9000);
-}
+  Serial.print(celsius * 1.8 + 32.0,2);
+  Serial.print(" F");
+  Serial.print("\t Conv time = "); Serial.print(markTime); Serial.println(" msec");
+  };					// end loop()
+  
+/*  Returns the value of byte "x" as a 2-digit hexadecimal 
+    character array in a 3-byte string suitable for printing 
+    String value is NOT PERSISTENT: copy elsewhere if needed */
+char* HEX2(uint8_t x) {
+  static char str[3];
+  static const char hx[16]= {'0', '1', '2', '3', '4', '5', '6', '7',
+                             '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+  str[0] = hx[x/16];
+  str[1] = hx[x%16];
+  str[2] = 0;
+  return str;
+};                                        // end HEX2()

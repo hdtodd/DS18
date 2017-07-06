@@ -15,7 +15,13 @@
 #include "OneWire.h"
 
 //  Devices we know about:
-typedef enum {DS18S20=0x10, DS18B20=0x28, DS1822=0x22} deviceDS18;
+struct devTuple {uint8_t devCode; const char* devName; };
+const devTuple listDS18s[4] = { {0x10, "DS18S20" },
+  			        {0x22, "DS1822"  },
+			        {0x28, "DS18B20" },
+			        {0xFF, "DSUnkwn"} };
+	 	      	  
+typedef enum {DS18S20=0x10, DS1822=0x22, DS18B20=0x28, DSUnkwn=0xFF} typeDS;
 
 //  See DS18B20.pdf datasheet for command codes
 typedef enum {searchROM=0xF0, readROM=0x33, matchROM=0x55, skipROM=0xCC,
@@ -68,11 +74,16 @@ public:
   */
   void saveScratchpad(uint8_t *addr);
 
-  /*  reads temperature of sensor at address "addr"
-      known to be of type type_s and returns value as a 
-      float number, in Celsius scale
+  /*  reads temperature of sensor at address "addr" with device type
+      identified by dsID(addr[0]) and returns value as a 
+      float number, in Celsius scale, along with raw data
   */
-  float getTemperature(int type_s, uint8_t *addr, uint8_t *data);
+  float getTemperature(uint8_t *addr, uint8_t *data);
+
+  /*  Uses the device code (addr[0]) to identify the type of DS device
+      Return the DS18-class device-type id
+  */
+  typeDS idDS(uint8_t devCode);
 
 };                                   // end class
 

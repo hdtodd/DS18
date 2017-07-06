@@ -1,7 +1,7 @@
 /* DS18BChar
-
+   Demonstrate the use of the DS18 Class that extends the OneWire Class.
    Characterize connected DS18B20 temperature sensors as a model
-   for incorporation into Weather_Station
+   for incorporation into Weather_Station.
    Adapted from OneWire DS18S20, DS18B20, DS1822 Temperature Example
    http://www.pjrc.com/teensy/td_libs_OneWire.html
    http://milesburton.com/Dallas_Temperature_Control_Library
@@ -29,7 +29,7 @@ void setup(void) {
      };
   ds18.reset();
   ds18.reset_search();
-
+  delay(250);			// 250 msec delay req'd after search reset
   Serial.println("Testing program to characterize DS18B20 temperature sensors");
   Serial.print("Connect sensors to Arduino with 3-wire connection.  ");
   Serial.println("NOT in parasitic mode");
@@ -44,7 +44,6 @@ void setup(void) {
 void loop(void) {
   int i; 
   uint8_t resMode;
-  uint8_t type_s;
   uint8_t data[12], addr[8];
   float celsius;
   
@@ -69,18 +68,15 @@ void loop(void) {
   }
  
   // Make sure it's a DS18 device; the first ROM byte indicates which chip
-  switch (addr[0]) {
-    case 0x10:
+  switch (ds18.idDS(addr[0])) {
+    case DS18S20:
       Serial.println("  Chip = DS18S20");  // old DS1820
-      type_s = 1;
       break;
-    case 0x28:
+    case DS18B20:
       Serial.println("  Chip = DS18B20");
-      type_s = 0;
       break;
-    case 0x22:
+    case DS1822:
       Serial.println("  Chip = DS1822");
-      type_s = 0;
       break;
     default:
       Serial.print("Device with code 0x");
@@ -97,7 +93,7 @@ for (resMode=0; resMode<=3; resMode++) {         // We'll cycle through all 4 re
 // sample temp for this probe
   ds18.reset();
   markTime = -millis();			// mark start of conversion, to substract from finish time
-  celsius = ds18.getTemperature(type_s, addr, data);
+  celsius = ds18.getTemperature(addr, data);
   markTime += millis();
 // report the probe data, the temp, and the timing for this probe
 // we assume that internal non-volatile RAM on the probes has been

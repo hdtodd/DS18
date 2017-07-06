@@ -62,13 +62,16 @@ void DS18::saveScratchpad(uint8_t *addr) {
   };
 
 /*  reads temperature of sensor at address "addr"
-    known to be of type type_s and returns value as a 
-    float number, in Celsius scale
+    and returns value as a float number, in Celsius scale
 */
-float DS18::getTemperature(int type_s, uint8_t *addr, uint8_t *data) {
+float DS18::getTemperature(uint8_t *addr, uint8_t *data) {
   uint8_t myResMode;
   select(addr);
   write(convertT);                   // start conversion, NOT IN PARASITE MODE
+                                     // Per OneWire docs, change that to 
+                                     // write(converT,1) if DS18's are in parasite mode
+                                     // but beware of possible device burnout
+  // now wait for device ready or timeout
   for (int delayCount = 0; delayCount<1000 && read_bit()==0; delayCount++) delay(1);
   reset();
   select(addr);    
@@ -79,16 +82,35 @@ float DS18::getTemperature(int type_s, uint8_t *addr, uint8_t *data) {
   // be stored to an "int16_t" type, which is always 16 bits
   // even when compiled on a 32 bit processor.
   int16_t raw = (data[1] << 8) | data[0];
-  if (type_s) {                           // older device format
-    raw = raw << 3; // 9 bit resolution default
-    if (data[7] == 0x10) {
-      // "count remain" gives full 12 bit resolution
+  /* This code supports just two formats for the temperatur data returned.
+     If other formats are needed, add to typeDS enumeration, idDS lookup,
+     and modify the following "if" to be a "switch"
+  */
+  if (idDS(addr[0])==DS18S20) {        // older device format
+    raw = raw << 3;                    // 9 bit resolution default
+    if (data[7] == 0x10) {             // "count remain" gives full 12 bit resolution
       raw = (raw & 0xFFF0) + 12 - data[6];
     }
-  } else {                                // mask data to resolution length
-    myResMode = (data[4] & 0x60)>>5;        // get res mode into rh 2 bits as index
+  } else {                             // mask data to resolution length
+    myResMode = (data[4] & 0x60)>>5;   // get res mode into rh 2 bits as index
     raw &= resMask[myResMode];
   };
 
-  return ( (float)raw / 16.0 );          // return temp in degress Celsius
+  return ( (float)raw / 16.0 );        // return temp in degress Celsius
 };
+
+typeDS DS18::idDS(uint8_t devCode) {
+  switch (devCode) {
+    case 0x10:
+      return DS18S20;
+      break;
+    case 0x28:
+      return DS18B20;
+      break;
+    case 0x22:
+      return DS1822;
+      break;
+    default:
+      return DSUnkwn;
+    };				// end switch
+  };				// end idDS()
