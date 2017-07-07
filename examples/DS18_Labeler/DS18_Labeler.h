@@ -1,4 +1,4 @@
-// Header file for DS18 characterization program, DS18_Char
+// Header file for DS18B internal labeling program, DS18_Labeler.h
 
 #include <inttypes.h>
 #include <Arduino.h>

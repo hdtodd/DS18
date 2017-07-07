@@ -14,18 +14,19 @@
 #include "Arduino.h"
 #include "OneWire.h"
 
-//  Devices we know about:
-struct devTuple {uint8_t devCode; const char* devName; };
-const devTuple listDS18s[4] = { {0x10, "DS18S20" },
-  			        {0x22, "DS1822"  },
-			        {0x28, "DS18B20" },
-			        {0xFF, "DSUnkwn"} };
-	 	      	  
-typedef enum {DS18S20=0x10, DS1822=0x22, DS18B20=0x28, DSUnkwn=0xFF} typeDS;
+//  Devices we know about.  Keep Null first and Unkwn last if adding other devices,
+//    else fix up DS18::idDS lookup procedure.
+typedef enum {DSNull, DS18S20, DS1822, DS18B20, DSUnkwn} typeDS;
+struct devTuple {uint8_t devCode; typeDS devID; const char* devName; };
+const devTuple listDS18s[5] = { {0x00, DSNull,  "DSNoCod" },
+				{0x10, DS18S20, "DS18S20" },
+  			        {0x22, DS1822,  "DS1822"  },
+			        {0x28, DS18B20, "DS18B20" },
+			        {0xFF, DSUnkwn, "DSUnkwn" } };
 
 //  See DS18B20.pdf datasheet for command codes
 typedef enum {searchROM=0xF0, readROM=0x33, matchROM=0x55, skipROM=0xCC,
-              alarmSearch=0xEC, convertT=0x44, writeSP=0x4A, readSP=0xBE, 
+              alarmSearch=0xEC, convertT=0x44, writeSP=0x4E, readSP=0xBE, 
               copySP=0x48, recallEEPROM=0xB8, readPower=0xB4} sensorCommands;
 /* readSP      read 9 bytes of ScratchPad memory over bus
    writeSP     write 3 user bytes of ScratchPad to sensor SP 2-4
@@ -37,12 +38,16 @@ typedef enum {searchROM=0xF0, readROM=0x33, matchROM=0x55, skipROM=0xCC,
 
 typedef enum resModes {res9=0b00, res10=0b01, res11=0b10, res12=0b11} resModes;
 const int resMask[4] = {~7, ~3, ~1, ~0};   // masks to truncate raw data
+char *HEX2(uint8_t x);		// used to print hex numbers with 2 digits always
+float FtoC(float F);
+float CtoF(float C);
 
 class DS18: public OneWire {
 
 private:
     uint8_t _pinnumber;
-    //    const int convDelay[4] = {94,188,375,750};
+
+    const int convDelay[4] = {94,188,375,750};
 //  Temp read conversion times, per Datasheet:
 //      9-bit     93.75 ms
 //     10-bit    187.5  ms
@@ -53,7 +58,7 @@ public:
 
   /* constructor -- needs to know pin # to pass to OneWire()
   */
-  DS18(uint8_t);
+  DS18(uint8_t pinnumber);
 
   /* Discover any DS18-class devices on the OneWire buss.  Library
      recognizes {DS18S20, DS18B20, DS1822} and knows how to set 
