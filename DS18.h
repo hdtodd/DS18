@@ -73,6 +73,14 @@ public:
   */
   void setPrecision(uint8_t *addr, uint8_t resMode);
 
+/* Returns the precision of conversion being used by the
+   DS18 device at "addr".  Precision is returned as the
+   *number of bits* of precision, not the enumerated type
+   identifier (res9..res12); subtract 9 from the returned
+   value to get (resModes) type identifier for precision
+*/
+  uint8_t getPrecision(uint8_t *addr);
+
   /*  Writes the contents of Scratchpad memory into EEPROM
         so that settings (ID or TH/TL and resolution) will be
         restored after next power-up 

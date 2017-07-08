@@ -55,6 +55,24 @@ void DS18::setPrecision(uint8_t *addr, uint8_t resMode) {
   return;
   };
 
+
+/* Returns the precision of conversion being used by the
+   DS18 device at "addr".  Precision is returned as the
+   *number of bits* of precision, not the enumerated type
+   identifier (res9..res12); subtract 9 from the returned
+   value to get (resModes) type identifier for precision
+*/
+uint8_t DS18::getPrecision(uint8_t *addr) {
+  uint8_t data[9];
+  reset();
+  select(addr);
+  write(readSP);
+  for (int i=0; i<9; i++) data[i] = read();
+  reset();
+  return ( 9 + ( (data[4] & 0x60) >> 5 ) );
+};
+
+
 /*  Writes the contents of Scratchpad memory into EEPROM
     so that settings (ID or TH/TL and resolution) will be
     restored after next power-up 
@@ -65,22 +83,25 @@ void DS18::saveScratchpad(uint8_t *addr) {
     return;
   };
 
-/*  reads temperature of sensor at address "addr"
-    and returns value as a float number, in Celsius scale
+/*  Reads temperature of sensor at address "addr"
+    and returns value as a float number in degrees Celsius.
+    See DS18B20.pdf data sheet, example 1, for reading details.
 */
 float DS18::getTemperature(uint8_t *addr, uint8_t *data) {
   uint8_t myResMode;
-  select(addr);
+  reset();                           // following datasheet specs start with reset
+  select(addr);                      // select specific device
   write(convertT);                   // start conversion, NOT IN PARASITE MODE
                                      // Per OneWire docs, change that to 
                                      // write(converT,1) if DS18's are in parasite mode
                                      // but beware of possible device burnout
   // now wait for device ready or timeout
   for (int delayCount = 0; delayCount<1000 && read_bit()==0; delayCount++) delay(1);
-  reset();
-  select(addr);    
+  reset();                           // reset again
+  select(addr);                      // select that device again
   write(readSP);                     // Read Scratchpad to get temp reading
   for (int i=0; i<9; i++) data[i] = read();
+  // End of datasheet prescription for reading temp.
   // Convert the data to temperature in float format from the 
   // DS18 internal representation in a 16-bit integer
   int16_t raw = (data[1] << 8) | data[0];

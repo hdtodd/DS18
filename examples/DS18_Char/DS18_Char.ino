@@ -96,7 +96,8 @@ void loop(void) {
     for ( i = 0; i < 9; i++) { Serial.print(HEX2(data[i])); Serial.print(" "); };
     Serial.print(" CRC=");
     Serial.print(HEX2(OneWire::crc8(data, 8)));
-    Serial.print("\tConv time(ms) = "); 
+    Serial.print("  Prec="); Serial.print(ds18.getPrecision(addr));
+    Serial.print("  Conv time(ms) = "); 
     if (markTime<100) Serial.write(' '); Serial.print(markTime); 
     Serial.print("  Temperature = "); Serial.print(celsius); Serial.print("C = ");
     Serial.print(celsius * 1.8 + 32.0,1); Serial.println("F");
