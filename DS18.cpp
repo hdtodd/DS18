@@ -151,3 +151,31 @@ float FtoC(float fahrenheit) {
 float CtoF(float celsius) {
   return ( celsius*1.8 + 32.0 );
 };
+
+
+  /*  Sets the alarm upper & lower temps (data[2] and data[3], respectively).
+      Each probe will register alarm status (respond to conditional search
+      accordingly) if the temp *when conversion is triggered* is 
+      greater than TH or less than TL.  Note that the probe has no
+      memory to say if it has ever gone to alarm: it only reflects the
+      status at the time of a commanded temperature conversion.
+
+      NOTE WELL: This destroys the internal label within the probe;
+      Must use 8-byte address to identify probe after this call
+  */
+void DS18::setAlarms(uint8_t *addr, int8_t TH, int8_t TL) {
+  uint8_t data[9];
+  reset();
+  select(addr);
+  write(readSP);
+  for (int i=0; i<9; i++) data[i] = read();
+  reset();
+  data[2] = (uint8_t) TH;
+  data[3] = (uint8_t) TL;
+  reset();
+  select(addr); 
+  write(writeSP);                    // write 3 bytes to scratchpad  
+  write_bytes( &data[2],3);
+  write(copySP);                     // copy to EEPROM
+  return;
+};

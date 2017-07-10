@@ -98,6 +98,18 @@ public:
   */
   typeDS idDS(uint8_t devCode);
 
+  /*  Sets the upper & lower temps (data[2] and data[3], respectively).
+      Each probe will register alarm status (respond to conditional search
+      accordingly) the the temp *when conversion is triggered* is 
+      greater than TH or less than TL.  Note that the probe has no
+      memory to say if it has ever gone to alarm: it only reflects the
+      status at the time of a commanded temperature conversion.
+
+      NOTE WELL: This destroys the internal label within the probe;
+      Must use 8-byte address to identify probe after this call
+  */
+void setAlarms(uint8_t *addr, int8_t TH, int8_t TL);
+
 };                                   // end class
 
 #endif                               // #end ifndef DS18
