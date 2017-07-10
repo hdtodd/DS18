@@ -20,7 +20,7 @@
 #include "OneWire.h"
 #include "DS18_Labeler.h"
 
-#define delayTime 10000		// delay time between sampling loop iterations, 10 sec
+#define delayTime 20000		// delay time between sampling loop iterations, 10 sec
 
 DS18 ds18(oneWirePin);  		// on pin 5 (a 4.7K resistor is necessary)
 long markTime;
@@ -53,16 +53,17 @@ void setup(void) {
      delay(60000);
      return;
      };
-  ds18.reset();
-  ds18.reset_search();
-  delay(250);			// 250 msec delay req'd after search reset
-
 };  		      	        // end setup()
 
 void loop(void) {
   uint8_t data[9], addr[8];
   float celsius;
   char buf[100];
+
+  ds18.reset();
+  ds18.reset_search();
+  delay(250);				// 250 msec delay req'd after search reset
+  if (doneLabeling) delay(delayTime);	// if we're just reporting, delay between loops
   
   if ( !ds18.search(addr) ) {		// scan for address of next device on OneWire
     // no next device; prepare for next scan loop
@@ -71,9 +72,9 @@ void loop(void) {
     ds18.reset_search();		// reset search, 
     delay(250);				// must wait at least 250 msec for reset search
     return;
-  };
+    };
 
-  Serial.print("ROM =");		// report the address of the next device
+  Serial.print("Addr = 0x");		// report the address of the next device
   for(int i = 0; i < 8; i++) {Serial.write(' '); Serial.print(HEX2(addr[i])); };
 
   if (ds18.crc8(addr, 7) != addr[7]) {    // confirm CRC of address
@@ -81,12 +82,12 @@ void loop(void) {
     Serial.print("CRC is not valid! 0x"); Serial.println(HEX2(OneWire::crc8(addr, 7)));
     delay(60000);
     return;
-    }
+    };
  
   // Make sure it's a DS18 device; the first address byte indicates which chip
   Serial.print("   Chip = "); Serial.println(listDS18s[ds18.idDS(addr[0])].devName);
   if ( (ds18.idDS(addr[0])==DSNull) || (ds18.idDS(addr[0])==DSUnkwn) ) {
-    Serial.print("Device with code 0x"); Serial.print(HEX2(addr[0]));
+    Serial.print("Device with id code 0x"); Serial.print(HEX2(addr[0]));
     Serial.println(" is not a known DS18 family device.");
     delay(60000);
     return;
@@ -131,7 +132,7 @@ void loop(void) {
         break;
       case 'q':
         doneLabeling = true;
-        break;
+	return;
       default:   
         break;
     };
@@ -139,4 +140,4 @@ void loop(void) {
   
   Serial.println();
   firstPass = false;  
-}
+};
