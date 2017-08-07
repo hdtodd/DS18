@@ -43,21 +43,21 @@ void setup(void) {
   };				// end setup()
 
 void loop(void) {
-  int i; 
+  int i, prec; 
   uint8_t resMode;
   uint8_t data[9], addr[8];
   float celsius;
   
   if ( !ds18.search(addr)) {		// scan for address of next device on OneWire
     // no next device; prepare for next scan loop
-    for (i=0; i<113; i++) Serial.print('-'); Serial.println(); 
+    for (i=0; i<115; i++) Serial.print('-'); Serial.println(); 
     Serial.println("NEXT SCAN");
     ds18.reset_search();		// reset search, 
     delay(delayTime);			// must wait at least 250 msec for reset search
     return;
   }
   
-  Serial.print("ROM =");		// report the address of the next device
+  Serial.print("Device Address =");		// report the address of the next device
   for( i = 0; i < 8; i++) {Serial.write(' '); Serial.print(HEX2(addr[i])); };
 
   if (ds18.crc8(addr, 7) != addr[7]) {    // confirm CRC of address
@@ -96,10 +96,12 @@ void loop(void) {
     for ( i = 0; i < 9; i++) { Serial.print(HEX2(data[i])); Serial.print(" "); };
     Serial.print(" CRC=");
     Serial.print(HEX2(OneWire::crc8(data, 8)));
-    Serial.print("  Prec="); Serial.print(ds18.getPrecision(addr));
-    Serial.print("  Conv time(ms) = "); 
+    Serial.print("  Prec="); 
+    if ( (prec=ds18.getPrecision(addr)) < 10) Serial.write(' ');
+    Serial.print(prec);
+    Serial.print("  Conv time = "); 
     if (markTime<100) Serial.write(' '); Serial.print(markTime); 
-    Serial.print("  Temperature = "); Serial.print(celsius); Serial.print("C = ");
+    Serial.print("ms  Temperature = "); Serial.print(celsius); Serial.print("C = ");
     Serial.print(celsius * 1.8 + 32.0,1); Serial.println("F");
     };                                        // end for(resMode...)
   Serial.println();
