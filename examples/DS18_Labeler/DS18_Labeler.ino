@@ -99,7 +99,7 @@ void loop(void) {
   ds18.reset();
   ds18.select(addr);
   markTime = -millis();   // mark start of conversion
-  celsius = ds18.getTemperature(addr,data);
+  celsius = ds18.getTemperature(addr,data,true);
   markTime += millis();
   Serial.print("Sensor ID: \'"); Serial.print((char) data[2]); Serial.print((char) data[3]);
   Serial.print("\'  Conv time = "); Serial.print(markTime); Serial.print(" msec");

@@ -1,7 +1,7 @@
 /* DS18.h
    DS18-class thermal sensor object definition
 
-   Created by HDTodd, 2017-July
+   Created by HDTodd, 2017-August
    OneWire DS18S20, DS18B20, DS1822 Temperature Example
    http://www.pjrc.com/teensy/td_libs_OneWire.html
    http://milesburton.com/Dallas_Temperature_Control_Library
@@ -23,6 +23,9 @@ const devTuple listDS18s[5] = { {0x00, DSNull,  "DSNoCod" },
   			        {0x22, DS1822,  "DS1822"  },
 			        {0x28, DS18B20, "DS18B20" },
 			        {0xFF, DSUnkwn, "DSUnkwn" } };
+
+//  Device info structure: address, type, and (boolean) whether it still responds
+typedef struct dsInfo { uint8_t addr[8]; typeDS type; boolean alive; } dsInfo;
 
 //  See DS18B20.pdf datasheet for command codes
 typedef enum {searchROM=0xF0, readROM=0x33, matchROM=0x55, skipROM=0xCC,
@@ -63,10 +66,10 @@ public:
   /* Discover any DS18-class devices on the OneWire buss.  Library
      recognizes {DS18S20, DS18B20, DS1822} and knows how to set 
      resolution and read temps for those devices.
-     Returns (bool)true if there is at least one DS18-class device on 
-     the buss or (bool)false if there isn't.
+     Returns (boolean)true if there is at least one DS18-class device on 
+     the buss or (boolean)false if there isn't.
   */
-  bool begin(void);
+  boolean begin(void);
 
   /*  set precision for temp conversion to 9, 10, 11, or 12 bits
       addr[] contains OneWire addr of device; resMode is resolution desired
@@ -75,39 +78,48 @@ public:
 
 /* Returns the precision of conversion being used by the
    DS18 device at "addr".  Precision is returned as the
-   *number of bits* of precision, not the enumerated type
-   identifier (res9..res12); subtract 9 from the returned
-   value to get (resModes) type identifier for precision
+   enumerated type identifier resModes (res9..res12); add 9 to 
+   (uint8_t)<returned value> to get precision in bits
+   (values 9 to 12).
 */
-  uint8_t getPrecision(uint8_t *addr);
+  resModes getPrecision(uint8_t *addr);
 
-  /*  Writes the contents of Scratchpad memory into EEPROM
-        so that settings (ID or TH/TL and resolution) will be
-        restored after next power-up 
-  */
+/*  Writes the contents of Scratchpad memory into EEPROM
+    so that settings (resolution and ID or TH/TL) will be
+    restored after next power-up 
+*/
   void saveScratchpad(uint8_t *addr);
 
-  /*  reads temperature of sensor at address "addr" with device type
-      identified by dsID(addr[0]) and returns value as a 
-      float number, in Celsius scale, along with raw data
-  */
-  float getTemperature(uint8_t *addr, uint8_t *data);
+/*  reads temperature of sensor at address "addr" with device type
+    identified by dsID(addr[0]) and returns value as a 
+    float number, in Celsius scale, along with raw data.
+    If forceSample==true, cause this probe to sample temp
+    If forceSample==false, just read the data (for concurrent sampling mode)
+*/
+  float getTemperature(uint8_t *addr, uint8_t *data, boolean forceSample);
 
-  /*  Uses the device code (addr[0]) to identify the type of DS device
-      Return the DS18-class device-type id
-  */
+/*  Causes all DS18 probes to sample concurrently, at whatever precision each one
+    is set to use.  Returns "true" if sampling completed in expected max time or
+    returns "false" if sampling timed out.
+*/
+  boolean readAllTemps(void);
+
+
+/*  Uses the device code (addr[0]) to identify the type of DS device
+    Return the DS18-class device-type id
+*/
   typeDS idDS(uint8_t devCode);
 
-  /*  Sets the upper & lower temps (data[2] and data[3], respectively).
-      Each probe will register alarm status (respond to conditional search
-      accordingly) the the temp *when conversion is triggered* is 
-      greater than TH or less than TL.  Note that the probe has no
-      memory to say if it has ever gone to alarm: it only reflects the
-      status at the time of a commanded temperature conversion.
+/*  Sets the upper & lower temps (data[2] and data[3], respectively).
+    Each probe will register alarm status (respond to conditional search
+    accordingly) the the temp *when conversion is triggered* is 
+    greater than TH or less than TL.  Note that the probe has no
+    memory to say if it has ever gone to alarm: it only reflects the
+    status at the time of a commanded temperature conversion.
 
-      NOTE WELL: This destroys the internal label within the probe;
-      Must use 8-byte address to identify probe after this call
-  */
+    NOTE WELL: This destroys the internal label within the probe;
+    Must use 8-byte address to identify probe after this call
+*/
 void setAlarms(uint8_t *addr, int8_t TH, int8_t TL);
 
 };                                   // end class

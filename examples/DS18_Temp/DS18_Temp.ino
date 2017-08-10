@@ -84,7 +84,7 @@ void loop(void) {
   ds18.setPrecision(addr,res11);		// set for 11-bit precision, ~350ms
   ds18.reset();
   markTime = -millis();				// mark start of conversion for timing
-  celsius = ds18.getTemperature(addr, data);    // returns when conversion complete
+  celsius = ds18.getTemperature(addr, data, true);    // returns when conversion complete
   markTime += millis();
   loopTime += markTime;
   Serial.print("Label='"); Serial.write(data[2]); Serial.write(data[3]);

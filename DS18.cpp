@@ -16,10 +16,10 @@ DS18::DS18(uint8_t pinnumber) : OneWire(pinnumber) {
 /* Discover any DS18-class devices on the OneWire buss.  Library
    recognizes {DS18S20, DS18B20, DS1822} and knows how to set 
    resolution and read temps for those devices.
-   Returns (bool)true if there is at least one DS18-class device on 
-   the buss or (bool)false if there isn't.
+   Returns (boolean)true if there is at least one DS18-class device on 
+   the buss or (boolean)false if there isn't.
 */
-bool DS18::begin(void) {
+boolean DS18::begin(void) {
   uint8_t addr[8];
   reset();
   reset_search();
@@ -51,30 +51,30 @@ void DS18::setPrecision(uint8_t *addr, uint8_t resMode) {
   select(addr); 
   write(writeSP);                    // write 3 bytes to scratchpad  
   write_bytes( &data[2],3);
-//write(copySP);                     // could copy to EEPROM but won't
+//write(copySP);                     // uncomment to make precision permanent
   return;
   };
 
 
 /* Returns the precision of conversion being used by the
    DS18 device at "addr".  Precision is returned as the
-   *number of bits* of precision, not the enumerated type
-   identifier (res9..res12); subtract 9 from the returned
-   value to get (resModes) type identifier for precision
+   enumerated type identifier resModes (res9..res12); add 9 to 
+   (uint8_t)<returned value> to get precision in bits
+   (values 9 to 12).
 */
-uint8_t DS18::getPrecision(uint8_t *addr) {
+resModes DS18::getPrecision(uint8_t *addr) {
   uint8_t data[9];
   reset();
   select(addr);
   write(readSP);
   for (int i=0; i<9; i++) data[i] = read();
   reset();
-  return ( 9 + ( (data[4] & 0x60) >> 5 ) );
+  return ( (resModes)( (data[4] & 0x60) >> 5 ) );
 };
 
 
 /*  Writes the contents of Scratchpad memory into EEPROM
-    so that settings (ID or TH/TL and resolution) will be
+    so that settings (resolution and ID or TH/TL) will be
     restored after next power-up 
 */
 void DS18::saveScratchpad(uint8_t *addr) {
@@ -83,20 +83,25 @@ void DS18::saveScratchpad(uint8_t *addr) {
     return;
   };
 
-/*  Reads temperature of sensor at address "addr"
-    and returns value as a float number in degrees Celsius.
-    See DS18B20.pdf data sheet, example 1, for reading details.
+/*  reads temperature of sensor at address "addr" with device type
+    identified by dsID(addr[0]) and returns temperature as a 
+    float number, in Celsius scale, along with raw data.
+    If forceSample==true, cause this probe to sample temp
+    If forceSample==false, just read the data (for concurrent conversion mode)
 */
-float DS18::getTemperature(uint8_t *addr, uint8_t *data) {
+
+float DS18::getTemperature(uint8_t *addr, uint8_t *data, boolean forceSample) {
   uint8_t myResMode;
-  reset();                           // following datasheet specs start with reset
-  select(addr);                      // select specific device
-  write(convertT);                   // start conversion, NOT IN PARASITE MODE
+  if (forceSample) {
+    reset();                           // following datasheet specs start with reset
+    select(addr);                      // select specific device
+    write(convertT);                   // start conversion, NOT IN PARASITE MODE
                                      // Per OneWire docs, change that to 
                                      // write(converT,1) if DS18's are in parasite mode
                                      // but beware of possible device burnout
-  // now wait for device ready or timeout
-  for (int delayCount = 0; delayCount<1000 && read_bit()==0; delayCount++) delay(1);
+    // now wait for device ready or timeout
+    for (int delayCount = 0; delayCount<1000 && read_bit()==0; delayCount++) delay(1);
+  };
   reset();                           // reset again
   select(addr);                      // select that device again
   write(readSP);                     // Read Scratchpad to get temp reading
@@ -123,6 +128,27 @@ float DS18::getTemperature(uint8_t *addr, uint8_t *data) {
   return ( (float)raw / 16.0 );        // return temp in degress Celsius
 };
 
+
+/*  Causes all DS18 probes to sample concurrently, at whatever precision each one
+    is set to use.  Returns "true" if sampling completed in expected max time or
+    returns "false" if sampling timed out.
+*/
+boolean DS18::readAllTemps(void) {
+  static int maxTime=1000;
+  int delayCount;
+  reset();
+  write(skipROM);
+  write(convertT);
+  for (delayCount = 0; delayCount<maxTime && read_bit()==0; delayCount++) delay(1);
+  return delayCount<maxTime;
+};
+
+
+
+
+/*  Identifies the type of device if it is a DS18 we know about, otherwise
+    marks it as unknown
+*/
 typeDS DS18::idDS(uint8_t code) {
   uint8_t id;
   for (id=(uint8_t)DSNull; id<=(uint8_t)DSUnkwn; id++) 

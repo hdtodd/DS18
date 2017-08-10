@@ -66,7 +66,7 @@ void setup(void) {
   Serial.println("Set the low- and high-temp threshholds for each probe.");
   Serial.println("Temps are integers -205F to +260F (-127 to +127 in Celsius).");
   while (ds18.search(addr)) {	// next device
-    celsius = ds18.getTemperature(addr,data);
+    celsius = ds18.getTemperature(addr,data,true);
     Serial.print("For probe at address: 0x"); 
     for (int i=0; i<8; i++) Serial.write(HEX2(addr[i]));
     Serial.print("  Temp = "); Serial.print(celsius,2); Serial.print(" C");
@@ -87,7 +87,7 @@ void setup(void) {
     Serial.print("C and TH="); Serial.print(TH); Serial.println("C");
     ds18.setAlarms(addr,TH,TL);
 
-    celsius = ds18.getTemperature(addr,data);
+    celsius = ds18.getTemperature(addr,data,true);
     Serial.print("\t==> Confirming that for probe 0x");
     for (int i=0; i<8; i++) Serial.write(HEX2(addr[i]));
     Serial.print(", TH = "); Serial.print((int8_t)data[2]);
@@ -143,7 +143,7 @@ void loop(void) {
 // Go through the list and log details
     ds18.reset();
     markTime = -millis();				// mark start of conversion for timing
-    celsius = ds18.getTemperature(addrList[i], data);    // returns when conversion complete
+    celsius = ds18.getTemperature(addrList[i], data, true);    // returns when conversion complete
     markTime += millis();
     Serial.print("[%Alarm]: Address=0x"); 
     for (int j=0;j<8;j++) Serial.print(HEX2(addrList[i][j]));
