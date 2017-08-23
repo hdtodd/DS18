@@ -18,6 +18,7 @@
 //    else fix up DS18::idDS lookup procedure.
 typedef enum {DSNull, DS18S20, DS1822, DS18B20, DSUnkwn} typeDS;
 struct devTuple {uint8_t devCode; typeDS devID; const char* devName; };
+// Device codes, enumerated type names, and labels for known DS18 devices
 const devTuple listDS18s[5] = { {0x00, DSNull,  "DSNoCod" },
 				{0x10, DS18S20, "DS18S20" },
   			        {0x22, DS1822,  "DS1822"  },
@@ -39,6 +40,8 @@ typedef enum {searchROM=0xF0, readROM=0x33, matchROM=0x55, skipROM=0xCC,
                  result left in SP bytes 0-1
 */
 
+static int convDelay[4] = {94,188,375,750};
+
 typedef enum resModes {res9=0b00, res10=0b01, res11=0b10, res12=0b11} resModes;
 const int resMask[4] = {~7, ~3, ~1, ~0};   // masks to truncate raw data
 char *HEX2(uint8_t x);		// used to print hex numbers with 2 digits always
@@ -50,7 +53,6 @@ class DS18: public OneWire {
 private:
     uint8_t _pinnumber;
 
-    const int convDelay[4] = {94,188,375,750};
 //  Temp read conversion times, per Datasheet:
 //      9-bit     93.75 ms
 //     10-bit    187.5  ms
@@ -99,11 +101,19 @@ public:
   float getTemperature(uint8_t *addr, uint8_t *data, boolean forceSample);
 
 /*  Causes all DS18 probes to sample concurrently, at whatever precision each one
-    is set to use.  Returns "true" if sampling completed in expected max time or
+    is set to use, and returns immediately WITHOUT WAITING FOR CONVERSION TO COMPLETE.
+    Allows program to resume and allow conversions to continue concurrently.  
+    Sets timer for use by "waitForTemps" to watch for timeout failure.
+    USE "waitForTemps" TO WAIT FOR TEMP CONVERSIONS TO COMPLETE.
+*/
+  void readAllTemps(void);
+
+/*  Waits (maxWait, in msec) for DS18 probes concurrent sampling to complete.
+    Delays until ALL probes report that they have completed conversions.
+    Returns "true" if sampling completed in expected max time or
     returns "false" if sampling timed out.
 */
-  boolean readAllTemps(void);
-
+  boolean waitForTemps(int maxWait);
 
 /*  Uses the device code (addr[0]) to identify the type of DS device
     Return the DS18-class device-type id

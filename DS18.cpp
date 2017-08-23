@@ -8,6 +8,7 @@
 */
 
 #include "DS18.h"
+int initTime;                // times concurrent conversion
 
 DS18::DS18(uint8_t pinnumber) : OneWire(pinnumber) {
     _pinnumber = pinnumber;
@@ -130,21 +131,29 @@ float DS18::getTemperature(uint8_t *addr, uint8_t *data, boolean forceSample) {
 
 
 /*  Causes all DS18 probes to sample concurrently, at whatever precision each one
-    is set to use.  Returns "true" if sampling completed in expected max time or
-    returns "false" if sampling timed out.
+    is set to use, and returns immediately WITHOUT WAITING FOR CONVERSION TO COMPLETE.
+    Allows program to resume and allow conversions to continue concurrently.  
+    Sets timer for use by "waitForTemps" to watch for timeout failure.
+    USE "waitForTemps" TO WAIT FOR TEMP CONVERSIONS TO COMPLETE.
 */
-boolean DS18::readAllTemps(void) {
-  static int maxTime=1000;
-  int delayCount;
+void DS18::readAllTemps(void) {
   reset();
   write(skipROM);
   write(convertT);
-  for (delayCount = 0; delayCount<maxTime && read_bit()==0; delayCount++) delay(1);
-  return delayCount<maxTime;
+  initTime = millis();
+  return;
 };
 
-
-
+/*  Waits (maxWait, in msec) for DS18 probes concurrent sampling to complete.
+    Delays until ALL probes report that they have completed conversions.
+    Returns "true" if sampling completed in expected max time or
+    returns "false" if sampling timed out.
+*/
+boolean DS18::waitForTemps(int maxWait) {
+  int delayCount;
+  for (delayCount = millis()-initTime; read_bit()==0 && delayCount<maxWait; delayCount++) delay(1);
+  return delayCount<maxWait;
+};                                     // end waitForTemps()
 
 /*  Identifies the type of device if it is a DS18 we know about, otherwise
     marks it as unknown

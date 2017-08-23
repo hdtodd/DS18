@@ -159,13 +159,13 @@ for (dev=0; dev<devCount; dev++) {
     // Now tell them all to sample temp
     markTime = -millis();				// mark start of conversion
     ds18.readAllTemps();				// do sampling
+    ds18.waitForTemps(convDelay[(int)resMode]);
     markTime += millis();				// finish time minus start time
 
 /* Finally, for each device, get its temp and report
    Report the probe data, the temp, and the timing for this probe
    We assume that internal non-volatile RAM on the probes has been
    previously set to be used as labels; TL/TH alarms not in use!
-   Otherwise modify code below to write 8 probe address bytes as HEX2.
 */
     for (dev=0; dev<devCount; dev++) {
       Serial.print("Sensor ID: \'"); Serial.print((char) data[2]); Serial.print((char) data[3]);
