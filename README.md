@@ -67,7 +67,7 @@ and reporting the time for conversion at each resolution of each probe.
 
 ## Dependencies
 1. [DS18 Class Library](https://github.com/hdtodd/DS18.git)
-1. [Stoffregen/Burton/PJRC OneWire Class Library](https://github.com/PaulStoffregen/OneWire)  [Also check out Miles Burton's Arduino temperature control library] (https://github.com/milesburton/Arduino-Temperature-Control-Library)
+1. [Stoffregen/Burton/PJRC OneWire Class Library](https://github.com/PaulStoffregen/OneWire)  [Also check out Miles Burton's Arduino temperature control library  https://github.com/milesburton/Arduino-Temperature-Control-Library ]
 
 
 
