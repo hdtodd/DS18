@@ -48,11 +48,15 @@ void setup(void) {
   Serial.println("First we'll scan the OneWire bus to identify devices.");
   Serial.println("Then we'll report again on each device and give you a chance");
   Serial.println("  to label each one.  Labels are limited to TWO CHARACTERS");
+  Serial.println();
   if (!ds18.begin()) {
      Serial.println("[?Labeler]: No DS18 devices found on OneWire buss.");
      delay(60000);
      return;
      };
+  ds18.reset();
+  ds18.reset_search();
+  delay(250);				// 250 msec delay req'd after search reset
 };  		      	        // end setup()
 
 void loop(void) {
@@ -60,14 +64,11 @@ void loop(void) {
   float celsius;
   char buf[100];
 
-  ds18.reset();
-  ds18.reset_search();
-  delay(250);				// 250 msec delay req'd after search reset
   if (doneLabeling) delay(delayTime);	// if we're just reporting, delay between loops
   
   if ( !ds18.search(addr) ) {		// scan for address of next device on OneWire
     // no next device; prepare for next scan loop
-    for (int i=0; i<120; i++) Serial.print('-'); Serial.println(); 
+    for (int i=0; i<112; i++) Serial.print('-'); Serial.println(); 
     Serial.println("NEXT SCAN");
     ds18.reset_search();		// reset search, 
     delay(250);				// must wait at least 250 msec for reset search
@@ -85,7 +86,7 @@ void loop(void) {
     };
  
   // Make sure it's a DS18 device; the first address byte indicates which chip
-  Serial.print("   Chip = "); Serial.println(listDS18s[ds18.idDS(addr[0])].devName);
+  Serial.print("   Chip = "); Serial.print(listDS18s[ds18.idDS(addr[0])].devName);
   if ( (ds18.idDS(addr[0])==DSNull) || (ds18.idDS(addr[0])==DSUnkwn) ) {
     Serial.print("Device with id code 0x"); Serial.print(HEX2(addr[0]));
     Serial.println(" is not a known DS18 family device.");
@@ -101,7 +102,7 @@ void loop(void) {
   markTime = -millis();   // mark start of conversion
   celsius = ds18.getTemperature(addr,data,true);
   markTime += millis();
-  Serial.print("Sensor ID: \'"); Serial.print((char) data[2]); Serial.print((char) data[3]);
+  Serial.print("  Sensor ID: \'"); Serial.print((char) data[2]); Serial.print((char) data[3]);
   Serial.print("\'  Conv time = "); Serial.print(markTime); Serial.print(" msec");
   Serial.print("  Temperature = "); 
   Serial.print(CtoF(celsius)); Serial.println(" F");
@@ -132,6 +133,11 @@ void loop(void) {
         break;
       case 'q':
         doneLabeling = true;
+	Serial.println();
+        for (int i=0; i<112; i++) Serial.print('='); Serial.println(); 
+	ds18.reset();
+        ds18.reset_search();		// reset search, 
+        delay(250);				// must wait at least 250 msec for reset search
 	return;
       default:   
         break;
