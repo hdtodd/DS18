@@ -15,7 +15,11 @@ DS18		KEYWORD1
 begin		KEYWORD2
 nextAddr	KEYWORD2
 setPrecision	KEYWORD2
+getPrecision	KEYWORD2
 saveScratchpad	KEYWORD2
-getTemperature KEYWORD2
-read 		KEYWORD2
+getTemperature  KEYWORD2
+readAllTemps    KEYWORD2
+waitForTemps	KEYWORD2
+idDS		KEYWORD2
+setAlarms	KEYWORD2
 
